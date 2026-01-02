@@ -1,5 +1,12 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Criterion, Student, GradingResult } from "../types";
+
+// --- AI Model Configuration ---
+const AI_MODELS = {
+  BASIC: 'gemini-3-flash-preview',
+  COMPLEX: 'gemini-3-pro-preview',
+};
 
 const getAIClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -13,7 +20,7 @@ export const generateRubricCriteria = async (focus: string, tasks: string[]): Pr
   const tasksContext = tasks.map((t, i) => `題目 ${i + 1}: ${t}`).join('\n');
   
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: AI_MODELS.BASIC,
     contents: `你是一位嚴謹的教育評量專家。請根據「作業題目」與指定的「評量重點」，為以下 5 個評分等級撰寫具體的判定標準。
 等級（由高至低）：超級優異, 表現良好, 已經做到, 還要加油, 努力改進。
 
@@ -74,7 +81,7 @@ n. **[向度名稱] ([判定等級] - [原始分]分)**：[具體改善建議]
 }`;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: AI_MODELS.COMPLEX,
     contents: `請評分學生 ${student.name} 的作業：\n\n【作業題目】：\n${tasksText}\n\n【評分標準】：\n${rubricsText}\n\n【學生作答】：\n${workText}`,
     config: {
       systemInstruction,
@@ -112,7 +119,7 @@ export const generateClassAnalysis = async (students: Student[]): Promise<string
     .map(s => ({ name: s.name, score: s.score, level: s.levelLabel }));
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: AI_MODELS.COMPLEX,
     contents: `請分析數據：${JSON.stringify(data)}。請像露娜(Luna)一樣輸出 Markdown 報告。`,
     config: { thinkingConfig: { thinkingBudget: 2000 } }
   });

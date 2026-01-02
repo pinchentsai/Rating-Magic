@@ -253,7 +253,7 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      {/* Step 2: 評量向度 (調整佈局與字體) */}
+      {/* Step 2: 評量向度 */}
       <section className="glass-panel p-8 rounded-[2rem]">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b-2 border-pink-100 pb-4">
           <div className="flex items-center gap-3">
@@ -278,7 +278,6 @@ const App: React.FC = () => {
               </button>
 
               <div className="flex flex-col gap-8">
-                {/* 頂部區塊：向度名稱與召喚 AI 按鈕 (字體調大) */}
                 <div className="flex flex-col md:flex-row gap-6 items-end border-b-2 border-purple-50 pb-6">
                   <div className="flex-1 w-full space-y-2">
                     <label className="text-base font-black text-purple-600 flex items-center gap-2">
@@ -304,7 +303,6 @@ const App: React.FC = () => {
                   </button>
                 </div>
 
-                {/* 底部區塊：五個等級網格 (字體調大) */}
                 <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
                   {criterion.levels.map((level, lIdx) => (
                     <div key={lIdx} className="space-y-3">
@@ -417,7 +415,6 @@ const App: React.FC = () => {
           </table>
         </div>
         
-        {/* 控制按鈕 */}
         <div className="mt-12 flex flex-col md:flex-row justify-between items-center gap-6">
           <button onClick={async () => {
             setIsEvaluating(true); setEvaluatingProgress({current:0, total: 1});

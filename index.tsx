@@ -7,6 +7,12 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { Sparkles, Moon, Wand2, Star, AlertCircle, Info, Plus, Trash2, Cpu, Cloud, CloudUpload, CloudDownload, FileJson, Download } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
+// --- AI Model Configuration (最新模型配置) ---
+const AI_CONFIG = {
+  BASIC_MODEL: 'gemini-3-flash-preview', // 用於快速生成標準
+  COMPLEX_MODEL: 'gemini-3-pro-preview', // 用於精準評分與深度分析
+};
+
 // --- Types ---
 export interface Level {
   label: string;
@@ -80,7 +86,7 @@ export const generateRubricCriteria = async (focus: string, tasks: string[]): Pr
   const tasksContext = tasks.map((t, i) => `題目 ${i + 1}: ${t}`).join('\n');
   
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: AI_CONFIG.BASIC_MODEL,
     contents: `你是一位嚴謹的教育評量專家。請根據「作業題目」與指定的「評量重點」，為以下 5 個評分等級撰寫具體的判定標準。
 等級（由高至低）：超級優異, 表現良好, 已經做到, 還要加油, 努力改進。
 
@@ -138,7 +144,7 @@ n. **[向度名稱] ([判定等級] - [原始分]分)**：[具體改善建議]
 }`;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: AI_CONFIG.COMPLEX_MODEL,
     contents: `請評分學生 ${student.name} 的作業：\n\n【作業題目】：\n${tasksText}\n\n【評分標準】：\n${rubricsText}\n\n【學生作答】：\n${workText}`,
     config: {
       systemInstruction,
@@ -173,7 +179,7 @@ export const generateClassAnalysis = async (students: Student[]): Promise<string
     .map(s => ({ name: s.name, score: s.score, level: s.levelLabel }));
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: AI_CONFIG.COMPLEX_MODEL,
     contents: `請分析數據：${JSON.stringify(data)}。請像露娜(Luna)一樣輸出 Markdown 報告。`,
     config: { thinkingConfig: { thinkingBudget: 2000 } }
   });
@@ -183,7 +189,7 @@ export const generateClassAnalysis = async (students: Student[]): Promise<string
 
 // --- UI Components ---
 const MoonWandSVG = () => (
-  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 wand-spin">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 md:w-16 md:h-16 wand-spin">
     <defs>
       <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
         <stop offset="0%" style={{ stopColor: '#ff9a9e', stopOpacity: 1 }} />
@@ -314,12 +320,12 @@ const App: React.FC = () => {
   }, [students]);
 
   // --- GitHub Advanced Sync Logic ---
-  const fetchGistData = async () => {
-    if (!githubToken || !gistId) return;
+  const fetchGistData = async (token: string, gid: string) => {
+    if (!token || !gid) return;
     setSyncLoading(true);
     try {
-      const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-        headers: { 'Authorization': `token ${githubToken}` }
+      const res = await fetch(`https://api.github.com/gists/${gid}`, {
+        headers: { 'Authorization': `token ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
@@ -340,8 +346,8 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    if (showCloudModal) fetchGistData();
-  }, [showCloudModal]);
+    if (showCloudModal) fetchGistData(githubToken, gistId);
+  }, [showCloudModal, githubToken, gistId]);
 
   const handleCloudBackup = async (mode: 'TEMPLATE' | 'FULL') => {
     if (!githubToken) { setSyncMessage("請先填入 GitHub Token"); return; }
@@ -376,7 +382,7 @@ const App: React.FC = () => {
       }
       localStorage.setItem('sailor_gh_token', githubToken);
       setSyncMessage("✨ 同步完成！檔案已在星空中閃耀。");
-      fetchGistData();
+      fetchGistData(githubToken, data.id || gistId);
     } catch (e) {
       setSyncMessage("❌ 備份失敗，請檢查權限。");
     } finally {
@@ -406,52 +412,51 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[95%] mx-auto p-4 md:p-8 space-y-12 pb-24">
+    <div className="max-w-[100%] md:max-w-[95%] mx-auto p-4 md:p-8 space-y-8 md:space-y-12 pb-24 overflow-x-hidden">
       {/* 魔法動畫遮罩 */}
       {isEvaluating && (
         <div className="fixed inset-0 z-[150] bg-pink-600/60 backdrop-blur-xl flex flex-col items-center justify-center text-white p-6">
           <div className="relative mb-12">
             <div className="absolute inset-0 bg-white/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
-            <Wand2 size={120} className="relative wand-spin text-yellow-300 drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]" />
+            <Wand2 className="size-20 md:size-[120px] relative wand-spin text-yellow-300 drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]" />
           </div>
-          <h2 className="text-4xl font-black mb-4 tracking-widest drop-shadow-lg text-center">正在召喚月亮力量...</h2>
-          <p className="text-xl font-medium mb-12 text-pink-100 h-8 text-center">{currentQuote}</p>
-          <div className="w-full max-w-md bg-white/20 h-4 rounded-full overflow-hidden border-2 border-white/30 mb-4">
+          <h2 className="text-2xl md:text-4xl font-black mb-4 tracking-widest drop-shadow-lg text-center">正在召喚月亮力量...</h2>
+          <p className="text-lg md:text-xl font-medium mb-12 text-pink-100 h-8 text-center px-4">{currentQuote}</p>
+          <div className="w-full max-w-md bg-white/20 h-4 rounded-full overflow-hidden border-2 border-white/30 mb-4 mx-4">
             <div 
               className="h-full bg-gradient-to-r from-yellow-300 to-pink-300 transition-all duration-500 shadow-[0_0_10px_white]"
               style={{ width: `${(evaluatingProgress.current / evaluatingProgress.total) * 100}%` }}
             ></div>
           </div>
-          <p className="font-mono text-2xl font-black">{evaluatingProgress.current} / {evaluatingProgress.total} 位學員</p>
+          <p className="font-mono text-xl md:text-2xl font-black">{evaluatingProgress.current} / {evaluatingProgress.total} 位學員</p>
         </div>
       )}
 
       {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
-        <div className="flex items-center gap-4">
+      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative">
+        <div className="flex items-center gap-4 w-full lg:w-auto">
           <MoonWandSVG />
           <div>
-            <h1 className="text-4xl font-bold text-pink-600 drop-shadow-sm flex items-center gap-2">Sailor Moon 評分魔法棒 <span className="text-yellow-400 text-2xl sparkle">✨</span></h1>
-            <p className="text-purple-600 mt-2 font-medium">♥ 讓評分像魔法一樣精準、快速、充滿愛！ ♥</p>
+            <h1 className="text-2xl md:text-4xl font-bold text-pink-600 drop-shadow-sm flex items-center gap-2">Sailor Moon 評分魔法棒 <span className="text-yellow-400 text-xl md:text-2xl sparkle">✨</span></h1>
+            <p className="text-purple-600 mt-1 md:mt-2 font-medium text-sm md:text-base">♥ 讓評分像魔法一樣精準、快速、充滿愛！ ♥</p>
           </div>
         </div>
         
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          {/* 當前模板顯示區域 */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
           <div 
             onClick={() => setShowTemplateModal(true)}
-            className="group cursor-pointer bg-white/80 border-2 border-pink-200 px-6 py-2.5 rounded-2xl shadow-sm hover:border-pink-400 hover:shadow-md transition-all flex items-center gap-3"
+            className="group cursor-pointer bg-white/80 border-2 border-pink-200 px-4 md:px-6 py-2 md:py-2.5 rounded-2xl shadow-sm hover:border-pink-400 hover:shadow-md transition-all flex items-center justify-between sm:justify-center gap-3"
           >
-            <span className="text-sm font-black text-purple-700">{currentTemplateName}</span>
-            <Sparkles size={14} className="text-yellow-400 group-hover:scale-125 transition-transform" />
+            <span className="text-sm font-black text-purple-700 truncate">{currentTemplateName}</span>
+            <Sparkles size={14} className="text-yellow-400 group-hover:scale-125 transition-transform flex-shrink-0" />
           </div>
 
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowSaveModal(true)} className="bg-white/80 border-2 border-pink-200 text-pink-500 px-5 py-2.5 rounded-full font-bold shadow-sm hover:bg-pink-50 transition-all text-sm h-[46px]">💾 儲存</button>
-            <button onClick={() => setShowTemplateModal(true)} className="bg-gradient-to-r from-pink-400 to-purple-400 text-white px-5 py-2.5 rounded-full font-bold shadow-md hover:scale-105 transition-all text-sm h-[46px]">📖 Mercury的圖書館 ({templates.length})</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => setShowSaveModal(true)} className="flex-1 sm:flex-none bg-white/80 border-2 border-pink-200 text-pink-500 px-4 py-2 md:py-2.5 rounded-full font-bold shadow-sm hover:bg-pink-50 transition-all text-xs md:text-sm h-[40px] md:h-[46px]">💾 儲存</button>
+            <button onClick={() => setShowTemplateModal(true)} className="flex-1 sm:flex-none bg-gradient-to-r from-pink-400 to-purple-400 text-white px-4 py-2 md:py-2.5 rounded-full font-bold shadow-md hover:scale-105 transition-all text-xs md:text-sm h-[40px] md:h-[46px]">📖 Mercury圖書館</button>
             <button 
               onClick={() => setShowCloudModal(true)} 
-              className="flex items-center gap-2 bg-blue-50 text-blue-500 px-5 py-2.5 rounded-2xl font-bold shadow-sm border-2 border-blue-100 hover:bg-blue-100 transition-all text-sm h-[46px]"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-50 text-blue-500 px-4 py-2 md:py-2.5 rounded-2xl font-bold shadow-sm border-2 border-blue-100 hover:bg-blue-100 transition-all text-xs md:text-sm h-[40px] md:h-[46px]"
             >
               <Cloud size={18} /> 雲端檔案櫃
             </button>
@@ -460,22 +465,22 @@ const App: React.FC = () => {
       </header>
 
       {/* Step 1: 題目 */}
-      <section className="glass-panel p-8 rounded-[2rem]">
-        <div className="flex items-center gap-3 mb-8 border-b-2 border-pink-100 pb-4">
-          <span className="bg-pink-100 p-2 rounded-full text-2xl">🌙</span>
-          <h2 className="text-2xl font-bold text-purple-800">Step 1. 召喚題目魔法陣</h2>
+      <section className="glass-panel p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem]">
+        <div className="flex items-center gap-3 mb-6 md:mb-8 border-b-2 border-pink-100 pb-4">
+          <span className="bg-pink-100 p-2 rounded-full text-xl md:text-2xl">🌙</span>
+          <h2 className="text-xl md:text-2xl font-bold text-purple-800">Step 1. 召喚題目魔法陣</h2>
         </div>
         <div className="space-y-4">
           {tasks.map((task, idx) => (
-            <div key={idx} className="flex gap-3 group animate-in fade-in slide-in-from-left duration-300">
-              <div className="bg-pink-100 text-pink-600 w-12 h-12 rounded-2xl flex items-center justify-center font-black shadow-inner flex-shrink-0">
+            <div key={idx} className="flex gap-2 md:gap-3 group animate-in fade-in slide-in-from-left duration-300">
+              <div className="bg-pink-100 text-pink-600 w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black shadow-inner flex-shrink-0 text-sm md:text-base">
                 {idx + 1}
               </div>
               <input 
                 value={task}
                 onChange={(e) => { const n = [...tasks]; n[idx] = e.target.value; setTasks(n); }}
-                className="flex-1 bg-white/50 border-2 border-pink-50 rounded-2xl px-6 py-3 text-purple-800 font-medium focus:border-pink-300 outline-none transition-all placeholder:text-pink-200"
-                placeholder=""
+                className="flex-1 bg-white/50 border-2 border-pink-50 rounded-xl md:rounded-2xl px-4 md:px-6 py-2 md:py-3 text-sm md:text-base text-purple-800 font-medium focus:border-pink-300 outline-none transition-all placeholder:text-pink-200"
+                placeholder="輸入作業題目..."
               />
               {tasks.length > 1 && (
                 <button onClick={() => setTasks(tasks.filter((_, i) => i !== idx))} className="text-pink-200 hover:text-red-400 transition-colors p-2">
@@ -484,46 +489,46 @@ const App: React.FC = () => {
               )}
             </div>
           ))}
-          <button onClick={() => setTasks([...tasks, ""])} className="w-full border-2 border-dashed border-pink-200 text-pink-400 py-4 rounded-2xl font-bold hover:bg-pink-50 transition-all flex items-center justify-center gap-2">
+          <button onClick={() => setTasks([...tasks, ""])} className="w-full border-2 border-dashed border-pink-200 text-pink-400 py-3 md:py-4 rounded-xl md:rounded-2xl font-bold hover:bg-pink-50 transition-all flex items-center justify-center gap-2 text-sm md:text-base">
             <Plus size={20} /> 新增一個魔法陣
           </button>
         </div>
       </section>
 
       {/* Step 2: 評量向度 */}
-      <section className="glass-panel p-8 rounded-[2rem]">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b-2 border-pink-100 pb-4">
+      <section className="glass-panel p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem]">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8 border-b-2 border-pink-100 pb-4">
           <div className="flex items-center gap-3">
-            <span className="bg-purple-100 p-2 rounded-full text-2xl">⭐</span>
-            <h2 className="text-2xl font-bold text-purple-800">Step 2. 設定評量魔杖</h2>
+            <span className="bg-purple-100 p-2 rounded-full text-xl md:text-2xl">⭐</span>
+            <h2 className="text-xl md:text-2xl font-bold text-purple-800">Step 2. 設定評量魔杖</h2>
           </div>
-          <div className="bg-purple-50 px-4 py-2 rounded-2xl border border-purple-100">
+          <div className="bg-purple-50 px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-purple-100 w-full md:w-auto">
              <p className="text-[10px] text-purple-400 font-bold mb-1">總分區區間參考：</p>
-             <div className="flex gap-3">
+             <div className="flex flex-wrap gap-2 md:gap-3">
                {totalScoreThresholds.map((t, i) => (
-                 <div key={i} className="text-[11px] font-black text-purple-700">{t.label}: {t.floor}~{t.ceiling}</div>
+                 <div key={i} className="text-[10px] md:text-[11px] font-black text-purple-700">{t.label}: {t.floor}~{t.ceiling}</div>
                ))}
              </div>
           </div>
         </div>
 
-        <div className="space-y-12">
+        <div className="space-y-8 md:space-y-12">
           {criteria.map((criterion, cIdx) => (
-            <div key={criterion.id} className="bg-white/40 border-2 border-white rounded-[2.5rem] p-8 shadow-sm relative group">
-              <button onClick={() => setCriteria(criteria.filter(c => c.id !== criterion.id))} className="absolute -top-3 -right-3 bg-white text-pink-300 hover:text-red-500 w-10 h-10 rounded-full shadow-md flex items-center justify-center border-2 border-pink-50 transition-all opacity-0 group-hover:opacity-100">
-                <Trash2 size={18} />
+            <div key={criterion.id} className="bg-white/40 border-2 border-white rounded-[1.5rem] md:rounded-[2.5rem] p-4 md:p-8 shadow-sm relative group">
+              <button onClick={() => setCriteria(criteria.filter(c => c.id !== criterion.id))} className="absolute -top-3 -right-3 bg-white text-pink-300 hover:text-red-500 w-8 h-8 md:w-10 md:h-10 rounded-full shadow-md flex items-center justify-center border-2 border-pink-50 transition-all opacity-100 md:opacity-0 group-hover:opacity-100">
+                <Trash2 size={16} />
               </button>
 
-              <div className="flex flex-col gap-8">
-                <div className="flex flex-col md:flex-row gap-6 items-end border-b-2 border-purple-50 pb-6">
+              <div className="flex flex-col gap-6 md:gap-8">
+                <div className="flex flex-col lg:flex-row gap-4 md:gap-6 items-start lg:items-end border-b-2 border-purple-50 pb-6">
                   <div className="flex-1 w-full space-y-2">
-                    <label className="text-base font-black text-purple-600 flex items-center gap-2">
+                    <label className="text-sm md:text-base font-black text-purple-600 flex items-center gap-2">
                       <Info size={16} /> 評量目標
                     </label>
                     <input 
                       value={criterion.focus}
                       onChange={(e) => { const n = [...criteria]; n[cIdx].focus = e.target.value; setCriteria(n); }}
-                      className="w-full bg-white border-2 border-purple-50 rounded-2xl px-6 py-4 text-xl text-purple-900 font-black focus:border-purple-300 outline-none shadow-sm placeholder:text-purple-100"
+                      className="w-full bg-white border-2 border-purple-50 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-lg md:text-xl text-purple-900 font-black focus:border-purple-300 outline-none shadow-sm placeholder:text-purple-100"
                       placeholder="例如：內容完整度、邏輯思考..."
                     />
                   </div>
@@ -534,33 +539,33 @@ const App: React.FC = () => {
                       res.forEach((text, i) => { if (n[cIdx].levels[i]) n[cIdx].levels[i].criteria = text; });
                       setCriteria(n);
                     }}
-                    className="w-full md:w-auto bg-purple-100 text-purple-700 px-8 py-4 rounded-2xl font-black text-base hover:bg-purple-200 transition-all flex items-center justify-center gap-2 border-2 border-purple-50 shadow-sm"
+                    className="w-full lg:w-auto bg-purple-100 text-purple-700 px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-sm md:text-base hover:bg-purple-200 transition-all flex items-center justify-center gap-2 border-2 border-purple-50 shadow-sm"
                   >
-                    <Cpu size={20} /> 使用幻之銀水晶自動生成標準
+                    <Cpu size={20} /> <span className="whitespace-nowrap">自動生成標準</span>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
                   {criterion.levels.map((level, lIdx) => (
-                    <div key={lIdx} className="space-y-3">
-                      <div className={`text-center py-2.5 px-2 rounded-xl text-sm font-black border-2 ${RANK_STYLES[lIdx]} shadow-sm`}>
+                    <div key={lIdx} className={`space-y-3 p-3 rounded-2xl border border-purple-50 bg-white/30`}>
+                      <div className={`text-center py-2 px-2 rounded-xl text-xs md:text-sm font-black border-2 ${RANK_STYLES[lIdx]} shadow-sm`}>
                         {level.label.split(' (')[0]}
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] text-purple-400 font-bold ml-1 uppercase tracking-wider">配分</label>
+                      <div className="flex items-center sm:flex-col gap-2">
+                        <label className="text-[10px] text-purple-400 font-bold uppercase tracking-wider flex-shrink-0">配分</label>
                         <input 
                           type="number" 
                           value={level.score}
-                          onChange={(e) => { const n = [...criteria]; n[cIdx].levels[lIdx].score = parseInt(e.target.value); setCriteria(n); }}
-                          className="w-full text-center bg-white border border-purple-100 rounded-lg py-1.5 text-sm font-black text-purple-700 focus:border-purple-300 outline-none"
+                          onChange={(e) => { const n = [...criteria]; n[cIdx].levels[lIdx].score = parseInt(e.target.value) || 0; setCriteria(n); }}
+                          className="w-20 sm:w-full text-center bg-white border border-purple-100 rounded-lg py-1 text-sm font-black text-purple-700 focus:border-purple-300 outline-none"
                         />
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] text-purple-400 font-bold ml-1 uppercase tracking-wider">描述標準</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">標準描述</label>
                         <textarea 
                           value={level.criteria}
                           onChange={(e) => { const n = [...criteria]; n[cIdx].levels[lIdx].criteria = e.target.value; setCriteria(n); }}
-                          className="w-full bg-white border border-purple-100 rounded-xl p-3 text-sm text-purple-800 font-medium leading-relaxed min-h-[160px] focus:border-purple-300 outline-none placeholder:text-purple-50 transition-all shadow-inner"
+                          className="w-full bg-white border border-purple-100 rounded-xl p-2 md:p-3 text-xs md:text-sm text-purple-800 font-medium leading-relaxed min-h-[100px] md:min-h-[160px] focus:border-purple-300 outline-none placeholder:text-purple-50 transition-all shadow-inner"
                           placeholder="具體標準描述..."
                         />
                       </div>
@@ -570,113 +575,116 @@ const App: React.FC = () => {
               </div>
             </div>
           ))}
-          <button onClick={() => setCriteria([...criteria, { id: uuidv4(), focus: "", levels: JSON.parse(JSON.stringify(DEFAULT_LEVELS)) }])} className="w-full border-2 border-dashed border-purple-200 text-purple-400 py-6 rounded-3xl font-black text-lg hover:bg-purple-50 transition-all flex items-center justify-center gap-2 group">
+          <button onClick={() => setCriteria([...criteria, { id: uuidv4(), focus: "", levels: JSON.parse(JSON.stringify(DEFAULT_LEVELS)) }])} className="w-full border-2 border-dashed border-purple-200 text-purple-400 py-4 md:py-6 rounded-2xl md:rounded-3xl font-black text-base md:text-lg hover:bg-purple-50 transition-all flex items-center justify-center gap-2 group">
             <Plus className="group-hover:rotate-90 transition-transform" /> 新增一個魔杖
           </button>
         </div>
       </section>
 
       {/* Step 3: 學生表 */}
-      <section className="glass-panel p-8 rounded-[2rem]">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b-2 border-pink-100 pb-6">
+      <section className="glass-panel p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem]">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8 border-b-2 border-pink-100 pb-6">
           <div className="flex items-center gap-3">
-            <span className="bg-indigo-100 p-2 rounded-full text-2xl">🏰</span>
-            <h2 className="text-2xl font-bold text-purple-800">Step 3. 銀千年魔法紀錄書</h2>
+            <span className="bg-indigo-100 p-2 rounded-full text-xl md:text-2xl">🏰</span>
+            <h2 className="text-xl md:text-2xl font-bold text-purple-800">Step 3. 銀千年魔法紀錄書</h2>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
             <input type="file" accept=".csv" ref={fileInputRef} onChange={e => {
               const file = e.target.files?.[0]; if(!file) return;
               const r = new FileReader(); r.onload = (ev) => {
                 const text = ev.target?.result as string;
                 const rows = text.split('\n').map(x => x.split(',')).slice(1);
-                setStudents(rows.map(r => ({ id: uuidv4(), name: r[0], contents: tasks.map((_, i) => r[i+1]||""), feedback: "", score: null, levelLabel: "", status: 'idle' })));
+                setStudents(rows.map(r => ({ id: uuidv4(), name: r[0]?.trim() || "未命名", contents: tasks.map((_, i) => r[i+1]?.trim()||""), feedback: "", score: null, levelLabel: "", status: 'idle' })));
               }; r.readAsText(file);
             }} className="hidden" />
-            <button onClick={() => fileInputRef.current?.click()} className="bg-white text-pink-600 border-2 border-pink-200 px-6 py-2 rounded-full font-bold">📥 召喚水手戰士</button>
-            <button onClick={() => setStudents([...students, { id: uuidv4(), name: `學生 ${students.length + 1}`, contents: new Array(tasks.length).fill(""), feedback: "", score: null, levelLabel: "", status: 'idle' }])} className="bg-pink-400 text-white px-6 py-2 rounded-full font-bold">➕ 新增</button>
+            <button onClick={() => fileInputRef.current?.click()} className="flex-1 md:flex-none bg-white text-pink-600 border-2 border-pink-200 px-4 py-2 rounded-full font-bold text-sm md:text-base">📥 召喚水手</button>
+            <button onClick={() => setStudents([...students, { id: uuidv4(), name: `學生 ${students.length + 1}`, contents: new Array(tasks.length).fill(""), feedback: "", score: null, levelLabel: "", status: 'idle' }])} className="flex-1 md:flex-none bg-pink-400 text-white px-4 py-2 rounded-full font-bold text-sm md:text-base">➕ 新增</button>
           </div>
         </div>
         
-        <div className="overflow-x-auto border-2 border-pink-100 rounded-3xl bg-white/60 custom-scrollbar max-h-[600px]">
-          <table className="w-full text-sm text-left min-w-[1200px]">
-            <thead className="bg-pink-50 sticky top-0 z-10 text-purple-700 font-bold border-b border-pink-200">
-              <tr>
-                <th className="p-5">戰士姓名</th>
-                {tasks.map((_, i) => <th key={i} className="p-5">答題 {i+1}</th>)}
-                <th className="p-5 text-center">總分</th>
-                <th className="p-5">等級</th>
-                <th className="p-5">女王回應</th>
-                <th className="p-5">狀態</th>
-                <th className="p-5">移除</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-pink-50">
-              {students.map((s, sIdx) => (
-                <tr key={s.id} className="hover:bg-white/80 transition-all">
-                  <td className="p-4 font-black text-purple-800">
-                    <input value={s.name} onChange={e => setStudents(students.map(x => x.id === s.id ? {...x, name: e.target.value} : x))} className="bg-transparent border-b border-pink-100 outline-none w-24" />
-                  </td>
-                  {tasks.map((_, tIdx) => (
-                    <td key={tIdx} className="p-4">
-                      <textarea 
-                        value={s.contents[tIdx]} 
-                        onChange={e => {const n=[...students]; n[sIdx].contents[tIdx]=e.target.value; setStudents(n);}} 
-                        className="w-full p-3 rounded-xl border border-pink-100 bg-white/50 text-xs min-h-[100px] min-w-[200px]" 
-                      />
-                    </td>
-                  ))}
-                  <td className="p-4 text-center text-2xl font-black text-pink-500">{s.score ?? '--'}</td>
-                  <td className="p-4">
-                    {s.levelLabel && (
-                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border ${RANK_STYLES[DEFAULT_LEVELS.findIndex(l => l.label.startsWith(s.levelLabel)) || 0]}`}>
-                        {s.levelLabel}
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    <div className="text-[10px] max-w-xs overflow-y-auto max-h-24 whitespace-pre-wrap leading-relaxed">
-                      {s.feedback}
-                    </div>
-                  </td>
-                  <td className="p-4 text-center">
-                    {s.status === 'loading' ? <div className="loading-ring"></div> : 
-                     s.status === 'done' ? "✅" : 
-                     s.status === 'error' ? <span title={s.errorMsg}><AlertCircle className="text-red-400" /></span> : "🌙"}
-                  </td>
-                  <td className="p-4 text-center">
-                    <button onClick={() => setStudents(students.filter(x => x.id !== s.id))} className="text-pink-200 hover:text-red-500 text-xl">×</button>
-                  </td>
+        <div className="relative border-2 border-pink-100 rounded-2xl md:rounded-3xl bg-white/60 overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar max-h-[600px]">
+            <table className="w-full text-sm text-left min-w-[1000px]">
+              <thead className="bg-pink-50 sticky top-0 z-10 text-purple-700 font-bold border-b border-pink-200">
+                <tr>
+                  <th className="p-4 md:p-5 whitespace-nowrap">戰士姓名</th>
+                  {tasks.map((_, i) => <th key={i} className="p-4 md:p-5 whitespace-nowrap">答題 {i+1}</th>)}
+                  <th className="p-4 md:p-5 text-center whitespace-nowrap">總分</th>
+                  <th className="p-4 md:p-5 whitespace-nowrap">等級</th>
+                  <th className="p-4 md:p-5 whitespace-nowrap">女王回應</th>
+                  <th className="p-4 md:p-5 whitespace-nowrap">狀態</th>
+                  <th className="p-4 md:p-5 text-center whitespace-nowrap">移除</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-pink-50">
+                {students.map((s, sIdx) => (
+                  <tr key={s.id} className="hover:bg-white/80 transition-all">
+                    <td className="p-3 md:p-4 font-black text-purple-800">
+                      <input value={s.name} onChange={e => setStudents(students.map(x => x.id === s.id ? {...x, name: e.target.value} : x))} className="bg-transparent border-b border-pink-100 outline-none w-20 md:w-24" />
+                    </td>
+                    {tasks.map((_, tIdx) => (
+                      <td key={tIdx} className="p-3 md:p-4">
+                        <textarea 
+                          value={s.contents[tIdx]} 
+                          onChange={e => {const n=[...students]; n[sIdx].contents[tIdx]=e.target.value; setStudents(n);}} 
+                          className="w-full p-2 md:p-3 rounded-xl border border-pink-100 bg-white/50 text-xs min-h-[80px] md:min-h-[100px] min-w-[180px] md:min-w-[200px] outline-none focus:border-pink-300" 
+                        />
+                      </td>
+                    ))}
+                    <td className="p-3 md:p-4 text-center text-xl md:text-2xl font-black text-pink-500">{s.score ?? '--'}</td>
+                    <td className="p-3 md:p-4">
+                      {s.levelLabel && (
+                        <span className={`px-3 py-1 md:px-4 md:py-1.5 rounded-full text-[9px] md:text-[10px] font-black border ${RANK_STYLES[DEFAULT_LEVELS.findIndex(l => l.label.startsWith(s.levelLabel)) || 0]}`}>
+                          {s.levelLabel}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3 md:p-4">
+                      <div className="text-[9px] md:text-[10px] max-w-xs overflow-y-auto max-h-24 whitespace-pre-wrap leading-relaxed text-purple-600">
+                        {s.feedback}
+                      </div>
+                    </td>
+                    <td className="p-3 md:p-4 text-center">
+                      {s.status === 'loading' ? <div className="loading-ring"></div> : 
+                       s.status === 'done' ? "✅" : 
+                       s.status === 'error' ? <span title={s.errorMsg}><AlertCircle className="text-red-400" /></span> : "🌙"}
+                    </td>
+                    <td className="p-3 md:p-4 text-center">
+                      <button onClick={() => setStudents(students.filter(x => x.id !== s.id))} className="text-pink-200 hover:text-red-500 text-xl transition-colors">×</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
         
-        <div className="mt-12 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="mt-8 md:mt-12 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
           <button onClick={async () => {
+            if (students.filter(s => s.status === 'done').length === 0) return alert("尚未有已評分的戰士資料！");
             setIsEvaluating(true); setEvaluatingProgress({current:0, total: 1});
             const res = await generateClassAnalysis(students);
             setReport(res); setShowReport(true); setIsEvaluating(false);
-          }} className="bg-purple-100 text-purple-700 px-8 py-3 rounded-full font-bold shadow-sm hover:bg-purple-200 flex items-center gap-2">
-            🔮 水手戰士戰力分析
+          }} className="bg-purple-100 text-purple-700 px-6 py-3 rounded-full font-bold shadow-sm hover:bg-purple-200 flex items-center justify-center gap-2 text-sm md:text-base">
+            🔮 戰力分析
           </button>
           
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={() => {
               const h = ["姓名", ...tasks.map((_,i)=>`題${i+1}`), "得分", "等級", "評語"].join(',');
               const b = students.map(s => [s.name, ...s.contents.map(c=>`"${c.replace(/"/g,'""')}"`), s.score, s.levelLabel, `"${s.feedback.replace(/"/g,'""')}"`].join(',')).join('\n');
               const bl = new Blob(["\ufeff"+h+'\n'+b], {type:'text/csv'});
               const u = URL.createObjectURL(bl); const a = document.createElement('a');
-              a.href=u; a.download='成績表.csv'; a.click();
-            }} className="px-8 py-3 border-2 border-pink-200 rounded-full font-bold text-pink-600 bg-white shadow-sm hover:bg-pink-50 transition-all">
-              📤 匯出 卷軸
+              a.href=u; a.download='水手戰士成績表.csv'; a.click();
+            }} className="flex-1 sm:flex-none px-6 py-3 border-2 border-pink-200 rounded-full font-bold text-pink-600 bg-white shadow-sm hover:bg-pink-50 transition-all text-sm md:text-base">
+              📤 匯出卷軸
             </button>
             <button 
               onClick={startBatchGrading} 
               disabled={isEvaluating}
-              className="bg-gradient-to-r from-pink-500 to-indigo-500 text-white px-12 py-4 rounded-full font-black shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+              className="flex-1 sm:flex-none bg-gradient-to-r from-pink-500 to-indigo-500 text-white px-8 md:px-12 py-3 md:py-4 rounded-full font-black shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm md:text-base"
             >
-              🌙 代替月亮來評分！
+              🌙 月亮評分！
             </button>
           </div>
         </div>
@@ -685,34 +693,34 @@ const App: React.FC = () => {
       {/* Cloud Sync Modal */}
       {showCloudModal && (
         <div className="fixed inset-0 z-[200] bg-blue-900/20 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-[3rem] w-full max-w-2xl border-4 border-blue-100 shadow-2xl relative flex flex-col max-h-[90vh]">
-            <button onClick={() => setShowCloudModal(false)} className="absolute top-6 right-6 text-2xl text-blue-300">×</button>
-            <h3 className="text-2xl font-black text-blue-600 mb-6 flex items-center gap-2"><Cloud /> 銀千年雲端檔案櫃</h3>
+          <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] w-[95%] max-w-2xl border-4 border-blue-100 shadow-2xl relative flex flex-col max-h-[90vh]">
+            <button onClick={() => setShowCloudModal(false)} className="absolute top-4 right-6 text-3xl text-blue-300">×</button>
+            <h3 className="text-xl md:text-2xl font-black text-blue-600 mb-6 flex items-center gap-2"><Cloud /> 銀千年雲端檔案櫃</h3>
             
             <div className="space-y-4 mb-6">
-              <input type="password" value={githubToken} onChange={e => setGithubToken(e.target.value)} className="w-full p-3 border-2 border-blue-50 rounded-xl" placeholder="GitHub PAT Token" />
-              <input value={gistId} onChange={e => setGistId(e.target.value)} className="w-full p-3 border-2 border-blue-50 rounded-xl" placeholder="Gist ID" />
+              <input type="password" value={githubToken} onChange={e => setGithubToken(e.target.value)} className="w-full p-3 border-2 border-blue-50 rounded-xl outline-none focus:border-blue-300 transition-all text-sm" placeholder="GitHub PAT Token" />
+              <input value={gistId} onChange={e => setGistId(e.target.value)} className="w-full p-3 border-2 border-blue-50 rounded-xl outline-none focus:border-blue-300 transition-all text-sm" placeholder="Gist ID" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <button onClick={() => handleCloudBackup('FULL')} className="bg-blue-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><CloudUpload size={18}/> 完整工作區備份</button>
-              <button onClick={() => handleCloudBackup('TEMPLATE')} className="bg-indigo-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Plus size={18}/> 備份目前模板</button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+              <button onClick={() => handleCloudBackup('FULL')} className="bg-blue-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm md:text-base"><CloudUpload size={18}/> 完整備份</button>
+              <button onClick={() => handleCloudBackup('TEMPLATE')} className="bg-indigo-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm md:text-base"><Plus size={18}/> 備份模板</button>
             </div>
             
             <div className="border-t border-blue-50 pt-4 flex-1 overflow-y-auto custom-scrollbar">
-              <p className="text-xs font-black text-blue-400 mb-4 tracking-widest uppercase">☁️ 雲端上的檔案清單：</p>
-              {syncLoading ? <div className="text-center py-8">正在搜尋星空...</div> : (
+              <p className="text-[10px] md:text-xs font-black text-blue-400 mb-4 tracking-widest uppercase italic">☁️ 雲端檔案清單：</p>
+              {syncLoading ? <div className="text-center py-8 text-blue-300 animate-pulse">正在搜尋星空...</div> : (
                 <div className="space-y-2">
-                  {cloudFiles.length === 0 && <p className="text-center text-gray-300 py-4">目前沒有雲端檔案</p>}
+                  {cloudFiles.length === 0 && <p className="text-center text-gray-300 py-4 italic text-sm">目前沒有雲端檔案</p>}
                   {cloudFiles.map(f => (
-                    <div key={f.name} className="flex justify-between items-center p-4 bg-blue-50/50 rounded-2xl border border-blue-100 hover:bg-blue-100 transition-all">
-                      <div className="flex items-center gap-3">
-                        <FileJson className="text-blue-400" size={18} />
-                        <div>
-                          <p className="font-bold text-blue-900 text-sm">{f.name}</p>
+                    <div key={f.name} className="flex justify-between items-center p-3 md:p-4 bg-blue-50/50 rounded-2xl border border-blue-100 hover:bg-blue-100 transition-all group">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <FileJson className="text-blue-400 flex-shrink-0" size={18} />
+                        <div className="overflow-hidden">
+                          <p className="font-bold text-blue-900 text-xs md:text-sm truncate">{f.name}</p>
                         </div>
                       </div>
-                      <button onClick={() => handleImportFile(f.content)} className="flex items-center gap-1 bg-white text-blue-600 px-3 py-1.5 rounded-lg text-xs font-black shadow-sm border border-blue-100">
+                      <button onClick={() => handleImportFile(f.content)} className="flex-shrink-0 flex items-center gap-1 bg-white text-blue-600 px-3 py-1.5 rounded-lg text-xs font-black shadow-sm border border-blue-100 hover:bg-blue-600 hover:text-white transition-all">
                         <Download size={14} /> 匯入
                       </button>
                     </div>
@@ -721,7 +729,7 @@ const App: React.FC = () => {
               )}
             </div>
 
-            {syncMessage && <div className="mt-4 p-4 bg-yellow-50 rounded-2xl text-xs font-bold text-yellow-700 animate-in fade-in">{syncMessage}</div>}
+            {syncMessage && <div className="mt-4 p-3 bg-yellow-50 rounded-2xl text-xs font-bold text-yellow-700 animate-in fade-in flex items-center gap-2"><Info size={14}/> {syncMessage}</div>}
           </div>
         </div>
       )}
@@ -729,16 +737,17 @@ const App: React.FC = () => {
       {/* Save Modal */}
       {showSaveModal && (
         <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-[3rem] w-full max-w-sm border-4 border-pink-100 shadow-2xl">
+          <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] w-[95%] max-w-sm border-4 border-pink-100 shadow-2xl">
             <h3 className="text-xl font-black text-pink-600 mb-6">儲存魔法陣</h3>
-            <input value={saveNameInput} onChange={e=>setSaveNameInput(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-pink-50 mb-8 font-bold outline-none focus:border-pink-300" placeholder="輸入名稱..." />
+            <input value={saveNameInput} onChange={e=>setSaveNameInput(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-pink-50 mb-8 font-bold outline-none focus:border-pink-300 text-sm" placeholder="輸入模板名稱..." />
             <div className="flex gap-4">
-              <button onClick={()=>setShowSaveModal(false)} className="flex-1 py-3 bg-gray-50 rounded-2xl font-bold text-gray-400">取消</button>
+              <button onClick={()=>setShowSaveModal(false)} className="flex-1 py-3 bg-gray-50 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all">取消</button>
               <button onClick={()=>{
+                if(!saveNameInput.trim()) return alert("請輸入名稱！");
                 const n = { id:uuidv4(), name:saveNameInput, tasks, criteria, timestamp:Date.now() };
                 const updated = [n, ...templates];
                 setTemplates(updated); setShowSaveModal(false); setSaveNameInput(""); setSelectedTemplateId(n.id);
-              }} className="flex-1 py-3 bg-pink-500 text-white rounded-2xl font-bold shadow-lg shadow-pink-100">確認</button>
+              }} className="flex-1 py-3 bg-pink-500 text-white rounded-2xl font-bold shadow-lg shadow-pink-100 hover:bg-pink-600 transition-all">確認</button>
             </div>
           </div>
         </div>
@@ -746,26 +755,26 @@ const App: React.FC = () => {
 
       {/* Analysis Modal */}
       {showReport && (
-        <div className="fixed inset-0 z-[160] bg-purple-900/40 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden border-4 border-white">
-            <div className="p-8 bg-gradient-to-r from-pink-50 to-indigo-50 border-b flex justify-between items-center">
-              <h3 className="text-2xl font-black text-purple-800">🔮 全班魔法數據分析</h3>
+        <div className="fixed inset-0 z-[160] bg-purple-900/40 backdrop-blur-md flex items-center justify-center p-2 md:p-4">
+          <div className="bg-white w-[98%] md:w-full max-w-4xl max-h-[90vh] rounded-[2rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden border-4 border-white">
+            <div className="p-6 md:p-8 bg-gradient-to-r from-pink-50 to-indigo-50 border-b flex justify-between items-center">
+              <h3 className="text-xl md:text-2xl font-black text-purple-800">🔮 魔法數據分析報告</h3>
               <button onClick={()=>setShowReport(false)} className="text-3xl text-purple-300 hover:text-purple-600 transition-colors">×</button>
             </div>
-            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
-              <div className="h-64 mb-12">
+            <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar flex-1">
+              <div className="h-64 mb-8 md:mb-12">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>
-                    <XAxis dataKey="name" fontSize={12} stroke="#a78bfa" />
+                    <XAxis dataKey="name" fontSize={10} stroke="#a78bfa" />
                     <YAxis hide />
-                    <Tooltip cursor={{fill: '#fdf2f8'}} contentStyle={{borderRadius:'16px', border:'none', boxShadow:'0 10px 20px rgba(0,0,0,0.05)'}} />
+                    <Tooltip cursor={{fill: '#fdf2f8'}} contentStyle={{borderRadius:'16px', border:'none', boxShadow:'0 10px 20px rgba(0,0,0,0.05)', fontSize: '12px'}} />
                     <Bar dataKey="value" radius={[10, 10, 0, 0]}>
                       {chartData.map((e, i) => <Cell key={i} fill={i % 2 === 0 ? '#ff9a9e' : '#a78bfa'} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <article className="prose prose-pink max-w-none text-purple-900 font-medium">
+              <article className="prose prose-sm md:prose-pink max-w-none text-purple-900 font-medium pb-8">
                 <ReactMarkdown>{report || ""}</ReactMarkdown>
               </article>
             </div>
@@ -773,27 +782,27 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Template Modal */}
+      {/* Library Modal */}
       {showTemplateModal && (
         <div className="fixed inset-0 z-[160] bg-pink-900/20 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl max-h-[80vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden">
-            <div className="p-8 bg-pink-50 border-b flex justify-between items-center">
-              <h3 className="text-2xl font-black text-pink-600">📖 魔法圖書館</h3>
+          <div className="bg-white w-[95%] max-w-2xl max-h-[85vh] rounded-[2rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden">
+            <div className="p-6 md:p-8 bg-pink-50 border-b flex justify-between items-center">
+              <h3 className="text-xl md:text-2xl font-black text-pink-600">📖 魔法圖書館</h3>
               <button onClick={()=>setShowTemplateModal(false)} className="text-3xl text-pink-200 hover:text-pink-500">×</button>
             </div>
-            <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+            <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar flex-1 space-y-4">
               {templates.length === 0 ? (
-                <div className="text-center py-12 text-pink-200 font-bold italic">目前還沒有收藏的魔法陣...</div>
+                <div className="text-center py-12 text-pink-200 font-bold italic">目前圖書館空蕩蕩的...</div>
               ) : (
                 templates.map(t => (
-                  <div key={t.id} className="bg-pink-50/50 p-6 rounded-3xl flex justify-between items-center border-2 border-transparent hover:border-pink-200 transition-all group">
-                    <div>
-                      <h4 className="font-black text-purple-700 text-lg">{t.name}</h4>
+                  <div key={t.id} className="bg-pink-50/50 p-4 md:p-6 rounded-2xl md:rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center border-2 border-transparent hover:border-pink-200 transition-all group gap-4">
+                    <div className="overflow-hidden w-full">
+                      <h4 className="font-black text-purple-700 text-base md:text-lg truncate">{t.name}</h4>
                       <p className="text-[10px] text-pink-300 font-bold mt-1">
-                        {new Date(t.timestamp).toLocaleString()} • {t.tasks.length} 個題目 • {t.criteria.length} 個向度
+                        {new Date(t.timestamp).toLocaleString()} • {t.tasks.length} 題 • {t.criteria.length} 向度
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto">
                       <button 
                         onClick={() => {
                           setTasks([...t.tasks]);
@@ -801,17 +810,18 @@ const App: React.FC = () => {
                           setShowTemplateModal(false);
                           setSelectedTemplateId(t.id);
                         }}
-                        className="bg-white text-pink-500 px-4 py-2 rounded-xl font-bold text-sm shadow-sm hover:bg-pink-500 hover:text-white transition-all"
+                        className="flex-1 sm:flex-none bg-white text-pink-500 px-4 py-2 rounded-xl font-bold text-xs md:text-sm shadow-sm hover:bg-pink-500 hover:text-white transition-all border border-pink-100"
                       >
                         讀取
                       </button>
                       <button 
                         onClick={() => {
+                          if(!confirm(`確定要毀滅 "${t.name}" 魔法陣嗎？`)) return;
                           const updated = templates.filter(x => x.id !== t.id);
                           setTemplates(updated);
                           if (selectedTemplateId === t.id) setSelectedTemplateId("");
                         }}
-                        className="bg-red-50 text-red-300 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all"
+                        className="flex-1 sm:flex-none bg-red-50 text-red-300 px-4 py-2 rounded-xl font-bold text-xs md:text-sm hover:bg-red-500 hover:text-white transition-all border border-red-50"
                       >
                         移除
                       </button>
@@ -824,9 +834,9 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <footer className="text-center py-12 text-purple-300 font-medium italic">
+      <footer className="text-center py-8 md:py-12 text-purple-300 font-medium italic text-sm md:text-base">
         <p>&copy; Sailor Moon Grading Wand. 每位學生都是閃耀的星光。🌙</p>
-        <p className="mt-2">基隆市中和國小 蔡品蓁老師 製</p>
+        <p className="mt-2 text-xs md:text-sm">基隆市中和國小 蔡品蓁老師 製</p>
       </footer>
     </div>
   );
