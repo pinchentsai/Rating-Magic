@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ "main" ] # 監聽 main 分支的變動
+    branches: [ "main" ]
 
 permissions:
   contents: write
@@ -18,12 +18,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          # 移除了 cache 設定，避免報錯
 
-      - run: npm ci
-      - run: npm run build # 這就是幫你執行打包指令
+      - run: npm install # 改用 install，沒有 lock 檔也能跑
+      - run: npm run build
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist # 上傳打包好的 dist 資料夾
+          folder: dist
