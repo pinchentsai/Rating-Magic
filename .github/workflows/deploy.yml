@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # 如果您的預設分支名稱是 master，請改為 master
+      - main
 
 permissions:
   contents: read
@@ -23,11 +23,12 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        # 使用 --no-package-lock 避免因為缺少 package-lock.json 而導致 CI 警告或失敗
-        run: npm install --no-package-lock
+        run: npm install
 
       - name: Build
         run: npm run build
+        env:
+          API_KEY: ${{ secrets.API_KEY }} # 如果有在 GitHub Secrets 設定 API Key
 
       - name: Upload Artifacts
         uses: actions/upload-pages-artifact@v3
