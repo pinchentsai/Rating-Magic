@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import ReactMarkdown from 'react-markdown';
@@ -547,6 +548,7 @@ const App: React.FC = () => {
 
       <footer className="text-center py-12 text-purple-300 font-medium italic">
         <p>&copy; Sailor Moon Grading Wand. 每位學生都是閃耀的星光。🌙</p>
+        <p className="mt-2">基隆市中和國小 蔡品蓁老師 製</p>
       </footer>
     </div>
   );

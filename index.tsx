@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -497,7 +498,7 @@ const App: React.FC = () => {
             <h2 className="text-2xl font-bold text-purple-800">Step 2. 設定評量魔杖</h2>
           </div>
           <div className="bg-purple-50 px-4 py-2 rounded-2xl border border-purple-100">
-             <p className="text-[10px] text-purple-400 font-bold mb-1">總分區間參考：</p>
+             <p className="text-[10px] text-purple-400 font-bold mb-1">總分區區間參考：</p>
              <div className="flex gap-3">
                {totalScoreThresholds.map((t, i) => (
                  <div key={i} className="text-[11px] font-black text-purple-700">{t.label}: {t.floor}~{t.ceiling}</div>
@@ -825,6 +826,7 @@ const App: React.FC = () => {
 
       <footer className="text-center py-12 text-purple-300 font-medium italic">
         <p>&copy; Sailor Moon Grading Wand. 每位學生都是閃耀的星光。🌙</p>
+        <p className="mt-2">基隆市中和國小 蔡品蓁老師 製</p>
       </footer>
     </div>
   );
