@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # 如果您的預設分支名稱是 master，請將此處改為 master
+      - main  # 如果您的預設分支名稱是 master，請改為 master
 
 permissions:
   contents: read
@@ -23,7 +23,8 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        # 使用 --no-package-lock 避免因為缺少 package-lock.json 而導致 CI 警告或失敗
+        run: npm install --no-package-lock
 
       - name: Build
         run: npm run build
