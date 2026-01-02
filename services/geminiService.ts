@@ -9,7 +9,7 @@ const AI_MODELS = {
 };
 
 const getAIClient = () => {
-  return new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 /**

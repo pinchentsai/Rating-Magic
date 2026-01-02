@@ -78,7 +78,7 @@ const RANK_STYLES = [
 
 // --- AI Services ---
 const getAIClient = () => {
-  return new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 export const generateRubricCriteria = async (focus: string, tasks: string[]): Promise<string[]> => {
