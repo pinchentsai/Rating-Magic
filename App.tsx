@@ -185,7 +185,7 @@ const App: React.FC = () => {
         <div className="flex items-center gap-4">
           <MoonWandSVG />
           <div>
-            <h1 className="text-4xl font-bold text-pink-600 drop-shadow-sm flex items-center gap-2">Sailor Moon 評分魔法棒 <span className="text-yellow-400 text-2xl sparkle">✨</span></h1>
+            <h1 className="text-4xl font-bold text-pink-600 drop-shadow-sm flex items-center gap-2">評分魔法棒 <span className="text-yellow-400 text-2xl sparkle">✨</span></h1>
             <p className="text-purple-600 mt-2 font-medium">♥ 讓評分像魔法一樣精準、快速、充滿愛！ ♥</p>
           </div>
         </div>
