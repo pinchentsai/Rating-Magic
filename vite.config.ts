@@ -8,7 +8,5 @@ export default defineConfig({
 
   base: '/Rating-Magic/', 
 
-  define: {
-    'process.env.API_KEY': JSON.stringify(process.env.API_KEY || '')
-  }
+ 
 });
