@@ -6,10 +6,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { Sparkles, Moon, Wand2, Star, AlertCircle, Info, Plus, Trash2, Cpu, Cloud, CloudUpload, CloudDownload, FileJson, Download } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
-// --- AI Model Configuration (最新模型配置) ---
+// --- AI Model Configuration ---
 const AI_CONFIG = {
-  BASIC_MODEL: 'gemini-3-flash-preview', // 用於快速生成標準
-  COMPLEX_MODEL: 'gemini-3-pro-preview', // 用於精準評分與深度分析
+  BASIC_MODEL: 'gemini-3-flash-preview',
+  COMPLEX_MODEL: 'gemini-3-pro-preview',
 };
 
 // --- Types ---
@@ -77,7 +77,9 @@ const RANK_STYLES = [
 
 // --- AI Services ---
 const getAIClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Vite 環境中 process.env.API_KEY 會在 build 時被定義
+  const apiKey = process.env.API_KEY;
+  return new GoogleGenAI({ apiKey: apiKey || '' });
 };
 
 export const generateRubricCriteria = async (focus: string, tasks: string[]): Promise<string[]> => {
