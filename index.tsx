@@ -462,6 +462,38 @@ const App: React.FC = () => {
     setStudents(prev => [...prev, ...newStudents]);
   };
 
+  const openSaveModal = () => {
+    const currentTpl = templates.find(t => t.id === selectedTemplateId);
+    setSaveNameInput(currentTpl ? currentTpl.name : "");
+    setShowSaveModal(true);
+  };
+
+  const handleSaveTemplate = () => {
+    if (!saveNameInput.trim()) return alert("請輸入名稱！");
+    
+    const existingIdx = templates.findIndex(t => t.id === selectedTemplateId);
+    let newTemplates;
+    let newId = selectedTemplateId;
+
+    if (existingIdx > -1) {
+      // 覆寫現有模板
+      newTemplates = templates.map((t, idx) => 
+        idx === existingIdx ? { ...t, name: saveNameInput, tasks: [...tasks], criteria: JSON.parse(JSON.stringify(criteria)), timestamp: Date.now() } : t
+      );
+    } else {
+      // 建立新模板
+      const nId = uuidv4();
+      const n = { id: nId, name: saveNameInput, tasks: [...tasks], criteria: JSON.parse(JSON.stringify(criteria)), timestamp: Date.now() };
+      newTemplates = [n, ...templates];
+      newId = nId;
+    }
+
+    setTemplates(newTemplates);
+    setSelectedTemplateId(newId);
+    setShowSaveModal(false);
+    setSaveNameInput("");
+  };
+
   return (
     <div className="max-w-[100%] md:max-w-[95%] mx-auto p-4 md:p-8 space-y-8 md:space-y-12 pb-24 overflow-x-hidden">
       
@@ -520,7 +552,7 @@ const App: React.FC = () => {
             <Sparkles size={14} className="text-yellow-400 group-hover:scale-125 transition-transform flex-shrink-0" />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => setShowSaveModal(true)} className="flex-1 sm:flex-none bg-white/80 border-2 border-pink-200 text-pink-500 px-4 py-2 md:py-2.5 rounded-full font-bold shadow-sm hover:bg-pink-50 transition-all text-xs md:text-sm h-[40px] md:h-[46px]">💾 儲存</button>
+            <button onClick={openSaveModal} className="flex-1 sm:flex-none bg-white/80 border-2 border-pink-200 text-pink-500 px-4 py-2 md:py-2.5 rounded-full font-bold shadow-sm hover:bg-pink-50 transition-all text-xs md:text-sm h-[40px] md:h-[46px]">💾 儲存</button>
             <button onClick={() => setShowTemplateModal(true)} className="flex-1 sm:flex-none bg-gradient-to-r from-pink-400 to-purple-400 text-white px-4 py-2 md:py-2.5 rounded-full font-bold shadow-md hover:scale-105 transition-all text-xs md:text-sm h-[40px] md:h-[46px]">📖 Mercury圖書館</button>
             <button onClick={() => setShowCloudModal(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-50 text-blue-500 px-4 py-2 md:py-2.5 rounded-2xl font-bold shadow-sm border-2 border-blue-100 hover:bg-blue-100 transition-all text-xs md:text-sm h-[40px] md:h-[46px]"><Cloud size={18} /> 雲端檔案櫃</button>
           </div>
@@ -725,7 +757,7 @@ const App: React.FC = () => {
             <input value={saveNameInput} onChange={e=>setSaveNameInput(e.target.value)} className="w-full p-4 rounded-2xl border-2 border-pink-50 mb-8 font-bold outline-none focus:border-pink-300 text-sm" placeholder="輸入模板名稱..." />
             <div className="flex gap-4">
               <button onClick={()=>setShowSaveModal(false)} className="flex-1 py-3 bg-gray-50 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all">取消</button>
-              <button onClick={()=>{ if(!saveNameInput.trim()) return alert("請輸入名稱！"); const n = { id:uuidv4(), name:saveNameInput, tasks, criteria, timestamp:Date.now() }; const updated = [n, ...templates]; setTemplates(updated); setShowSaveModal(false); setSaveNameInput(""); setSelectedTemplateId(n.id); }} className="flex-1 py-3 bg-pink-500 text-white rounded-2xl font-bold shadow-lg shadow-pink-100 hover:bg-pink-600 transition-all">確認</button>
+              <button onClick={handleSaveTemplate} className="flex-1 py-3 bg-pink-500 text-white rounded-2xl font-bold shadow-lg shadow-pink-100 hover:bg-pink-600 transition-all">確認</button>
             </div>
           </div>
         </div>
