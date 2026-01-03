@@ -1,10 +1,11 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Criterion, Student, GradingResult } from "../types";
 
 // --- AI Model Configuration ---
 const AI_MODELS = {
-  BASIC: 'gemini-2.5-pro',
-  COMPLEX: 'gemini-2.5-pro',
+  BASIC: 'gemini-flash-latest',
+  COMPLEX: 'gemini-flash-latest',
 };
 
 const getAIClient = () => {
