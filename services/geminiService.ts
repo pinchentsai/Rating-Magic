@@ -4,7 +4,7 @@ import { Criterion, Student, GradingResult } from "../types";
 // --- AI Model Configuration ---
 const AI_MODELS = {
   BASIC: 'gemini-3-flash-preview',
-  COMPLEX: 'gemini-3-pro-preview',
+  COMPLEX: 'gemini-3-flash-preview',
 };
 
 const getAIClient = () => {
