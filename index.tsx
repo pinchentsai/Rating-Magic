@@ -9,8 +9,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 // --- AI Model Configuration ---
 const AI_CONFIG = {
-  BASIC_MODEL: 'gemini-flash-latest',
-  COMPLEX_MODEL: 'gemini-flash-latest',
+  BASIC_MODEL: 'gemini-3-flash-preview',
+  COMPLEX_MODEL: 'gemini-3-flash-preview',
 };
 
 // --- Types ---
