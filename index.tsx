@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -184,14 +183,18 @@ export const evaluateStudentWork = async (
   const systemInstruction = `你是一位專業且嚴謹的教師。
 請嚴格根據評語規範輸出 JSON 格式。
 
+【評分原則】：
+請根據評分標準給分。給分不限於等級定義的固定分數，可以在該等級的分數區間內靈活給予。
+例如：若「超級優異」定義為 100 分，「表現良好」定義為 89 分，則總分 90~100 分皆屬於「超級優異」區間。你可以根據學生表現的細膩程度給予 95 分，不一定要給滿分 100。
+
 【評語格式規範】：
-n. **[向度名稱] ([判定等級] - [原始分]分)**：[具體改善建議]
+n. **[向度名稱] ([判定等級] - [給予分數]分)**：[具體改善建議]
 
 回覆 JSON 範例：
 {
-  "score": 85,
-  "levelLabel": "表現良好",
-  "feedback": "1. **內容完整度 (表現良好 - 45分)**：建議補充..."
+  "score": 95,
+  "levelLabel": "超級優異",
+  "feedback": "1. **內容完整度 (超級優異 - 48分)**：表現非常出色，若能再增加一點細節會更完美。"
 }`;
 
   const response = await ai.models.generateContent({
@@ -435,6 +438,63 @@ const App: React.FC = () => {
       setSyncMessage("✨ 同步完成！檔案已在星空中閃耀。");
     } catch (e) {
       setSyncMessage("❌ 備份失敗，請檢查權限。");
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const handleCloudSync = async () => {
+    if (!githubToken || !gistId) { setSyncMessage("請填入 Token 與 Gist ID 才能同步。"); return; }
+    setSyncLoading(true);
+    setSyncMessage("正在從星空中召喚資料...");
+
+    try {
+      const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+        headers: { 'Authorization': `token ${githubToken}` }
+      });
+      if (!res.ok) throw new Error("Gist Not Found");
+      const gistData = await res.json();
+      
+      let syncCount = 0;
+      
+      // 1. 優先恢復完整備份
+      if (gistData.files["SAILOR_FULL_BACKUP.json"]) {
+        const content = JSON.parse(gistData.files["SAILOR_FULL_BACKUP.json"].content);
+        if (content.templates) setTemplates(content.templates);
+        if (content.workspace) {
+          setTasks(content.workspace.tasks || [""]);
+          setCriteria(content.workspace.criteria || []);
+          setStudents(content.workspace.students || []);
+        }
+        syncCount++;
+        setSyncMessage("✨ 完整同步成功！工作空間已還原。");
+      } else {
+        // 2. 或是從檔案列表中蒐集所有單獨模板
+        const newTemplates = [...templates];
+        let foundTpl = 0;
+        Object.keys(gistData.files).forEach(filename => {
+          if (filename.startsWith("TPL_") && filename.endsWith(".json")) {
+            try {
+              const tpl = JSON.parse(gistData.files[filename].content);
+              if (!newTemplates.find(t => t.id === tpl.id)) {
+                newTemplates.push(tpl);
+                foundTpl++;
+              }
+            } catch (e) {}
+          }
+        });
+        if (foundTpl > 0) {
+          setTemplates(newTemplates);
+          setSyncMessage(`✨ 已同步 ${foundTpl} 個新模板回圖書館。`);
+        } else {
+          setSyncMessage("🌙 雲端檔案櫃中沒有找到相關備份紀錄。");
+        }
+      }
+      
+      localStorage.setItem('sailor_gh_token', githubToken);
+      localStorage.setItem('sailor_gist_id', gistId);
+    } catch (e) {
+      setSyncMessage("❌ 同步失敗，請確認 ID 是否正確或權限是否開啟。");
     } finally {
       setSyncLoading(false);
     }
@@ -737,14 +797,21 @@ const App: React.FC = () => {
             <button onClick={() => setShowCloudModal(false)} className="absolute top-4 right-6 text-3xl text-blue-300">×</button>
             <h3 className="text-xl md:text-2xl font-black text-blue-600 mb-6 flex items-center gap-2"><Cloud /> 銀千年雲端檔案櫃</h3>
             <div className="space-y-4 mb-6">
-              <input type="password" value={githubToken} onChange={e => setGithubToken(e.target.value)} className="w-full p-3 border-2 border-blue-50 rounded-xl outline-none focus:border-blue-300 transition-all text-sm" placeholder="GitHub PAT Token" />
-              <input value={gistId} onChange={e => setGistId(e.target.value)} className="w-full p-3 border-2 border-blue-50 rounded-xl outline-none focus:border-blue-300 transition-all text-sm" placeholder="Gist ID" />
+              <input type="password" value={githubToken} onChange={e => setGithubToken(e.target.value)} className="w-full p-3 border-2 border-blue-50 rounded-xl outline-none focus:border-blue-300 transition-all text-sm" placeholder="GitHub PAT Token (ghp_...)" />
+              <input value={gistId} onChange={e => setGistId(e.target.value)} className="w-full p-3 border-2 border-blue-50 rounded-xl outline-none focus:border-blue-300 transition-all text-sm" placeholder="Gist ID (第一次備份可留空)" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-              <button onClick={() => handleCloudBackup('FULL')} className="bg-blue-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm md:text-base"><CloudUpload size={18}/> 完整備份</button>
-              <button onClick={() => handleCloudBackup('TEMPLATE')} className="bg-indigo-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm md:text-base"><Plus size={18}/> 備份模板</button>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <button onClick={() => handleCloudBackup('FULL')} className="bg-blue-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm md:text-base hover:bg-blue-600 transition-all"><CloudUpload size={18}/> 完整備份</button>
+              <button onClick={() => handleCloudBackup('TEMPLATE')} className="bg-indigo-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm md:text-base hover:bg-indigo-600 transition-all"><Plus size={18}/> 備份模板</button>
             </div>
-            {syncMessage && <div className="mt-4 p-3 bg-yellow-50 rounded-2xl text-xs font-bold text-yellow-700 animate-in fade-in flex items-center gap-2"><Info size={14}/> {syncMessage}</div>}
+            
+            <button onClick={handleCloudSync} disabled={syncLoading} className="w-full bg-gradient-to-r from-blue-400 to-indigo-400 text-white py-4 rounded-xl font-black flex items-center justify-center gap-2 text-sm md:text-base hover:shadow-lg active:scale-95 transition-all mb-4">
+              {syncLoading ? <div className="loading-ring"></div> : <CloudDownload size={20} />}
+              從雲端同步/讀取資料
+            </button>
+
+            {syncMessage && <div className="p-3 bg-yellow-50 rounded-2xl text-xs font-bold text-yellow-700 animate-in fade-in flex items-center gap-2"><Info size={14}/> {syncMessage}</div>}
           </div>
         </div>
       )}
@@ -800,7 +867,7 @@ const App: React.FC = () => {
 
       <footer className="text-center py-8 md:py-12 text-purple-300 font-medium italic text-sm md:text-base">
         <p>&copy; Sailor Moon Grading Wand. 每位學生都是閃耀的星光。🌙</p>
-        <p className="mt-2 text-xs md:text-sm">基隆市中和國小 蔡品蓁老師 製</p>
+        <p className="mt-2 text-xs md:text-sm">基隆市中和國小 Winnie Tsai 製</p>
       </footer>
     </div>
   );

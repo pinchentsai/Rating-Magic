@@ -5,9 +5,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   
-  // 請確保這裡的名稱與您的 GitHub Repository 名稱完全一致
-  // 例如：您的網址是 https://<username>.github.io/Rating-Magic/
-  base: '/Rating-Magic/', 
+  // 使用相對路徑以相容於不同的部署環境（如 GitHub Pages 子目錄）
+  base: './', 
 
   define: {
     // 讓程式碼中的 process.env.API_KEY 在編譯時被正確替換
